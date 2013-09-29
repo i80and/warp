@@ -19,7 +19,7 @@ Generator.prototype.generate = function(seed) {
     var ctx = this.canvas.getContext('2d');
     var time = new Date();
 
-    this.worker = new Worker('main_workerline.js');
+    this.worker = new Worker('main_worker.js');
 
     this.worker.addEventListener('message', function(ev) {
         if(ev.data.progress !== undefined) {
