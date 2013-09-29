@@ -20,9 +20,9 @@ Generator.prototype.generate = function(seed) {
     var ctx = this.canvas.getContext('2d');
     var time = new Date();
 
-    var worker = new Worker('main_worker.js');
+    this.worker = new Worker('main_worker.js');
 
-    worker.addEventListener('message', function(ev) {
+    this.worker.addEventListener('message', function(ev) {
         if(ev.data.progress !== undefined) {
             self.onprogress(ev.data.progress / height);
         }
@@ -41,7 +41,7 @@ Generator.prototype.generate = function(seed) {
         }
     }, false);
 
-    worker.postMessage({
+    this.worker.postMessage({
         'seed': seed,
         'width': width,
         'height': height
