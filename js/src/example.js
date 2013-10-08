@@ -60,6 +60,9 @@ window.onload = function() {
     generator.onprogress = function(p) {
         progressElement.value = p * 100;
     };
+    generator.ondone = function() {
+        progressElement.value = 100;
+    };
 
     document.getElementById('generate-button').onclick = function() {
         var seed = new Date().getTime();
