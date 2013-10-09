@@ -12,21 +12,38 @@ self.onmessage = function(ev) {
     var width = ev.data.width;
     var height = ev.data.height;
     var seed = ev.data.seed;
+    var type = ev.data.type;
 
-    var buf = new Uint8Array(width*height*4);
-
+    var buf = new Uint8Array(width*height);
     var rng = new xorshift.RandomGenerator(seed);
     var p2d = new warp.Perlin2D(width, height, 1, 2, rng);
 
+    var generate;
+    if(type === 'warp') {
+        var strength = 250;
+        if(ev.data.options !== undefined) {
+            strength = ev.data.options.strength;
+        }
+        generate = function(x, y) {
+            return p2d.warp(x, y, strength);
+        };
+    }
+    else if(type === 'fbm') {
+        generate = function(x, y) {
+            return p2d.fbm(x, y);
+        };
+    }
+    else {
+        self.postMessage({'error': 'Invalid generation type "' + type + '"'});
+        return;
+    }
+
     for(var y = 0; y < height; y += 1) {
         for(var x = 0; x < width; x += 1) {
-            var val = p2d.warp(x+0.5, y+0.5, 250);
+            var offset = (x + y * width);
+            var val = generate(x+0.5, y+0.5);
             val = assign_tile(val);
-            var offset = (x + y * width) * 4;
-            buf[offset+0] = val;
-            buf[offset+1] = val;
-            buf[offset+2] = val;
-            buf[offset+3] = 255;
+            buf[offset] = val;
         }
 
         self.postMessage({'progress': y});
