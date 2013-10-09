@@ -19,6 +19,8 @@ NoiseGenerator.prototype.generate = function(seed, width, height, type, options)
     if(type === undefined) type = 'warp';
     if(type !== 'warp' && type !== 'fbm') throw 'Invalid noise type ' + type;
 
+    if(options === undefined) options = {};
+
     this.worker = new Worker('main_worker.js');
 
     this.worker.addEventListener('message', function(ev) {
@@ -86,8 +88,8 @@ var MapGenerator = function() {
 
     this.onprogress = function(p) {};
     this.ondone = function(result) {};
+    this.oncomponent = function(name, result) {};
 };
-
 
 var BIOME_WATER = 0;
 var BIOME_SHALLOW_WATER = 1;
@@ -113,8 +115,12 @@ var BIOMES = [
     [157, 209, 137],    // Plain Tree
     [255, 255, 0]       // Desert
 ]
-MapGenerator.prototype.generateImage = function(seed, width, height) {
+MapGenerator.prototype.generateImage = function(seed, width, height, options) {
     var _this = this;
+
+    if(options === undefined) options = {};
+    if(options.moisture === undefined) options.moisture = 0.0;
+    if(options.elevation === undefined) options.elevation = 0.0;
 
     var maps = {};
     var finalBuf = new Uint8Array(width*height*4);
@@ -123,30 +129,34 @@ MapGenerator.prototype.generateImage = function(seed, width, height) {
 
         var treeRng = new xorshift.RandomGenerator(seed+3);
         if(maps['topology'] && maps['moisture'] && maps['trees']) {
-            var topology = maps['topology'];
-            var moisture = maps['moisture'];
-            var trees = maps['trees'];
+            var topologyMap = maps['topology'];
+            var moistureMap = maps['moisture'];
+            var treesMap = maps['trees'];
 
             var outputOffset = 0;
             for(var i = 0; i < width*height; i += 1) {
+                var moisture = moistureMap[i] + options.moisture;
+                var topology = topologyMap[i] + options.elevation;
+                var trees = treesMap[i];
+
                 var biome;
 
-                if(topology[i] < 100) biome = BIOME_WATER
-                else if(topology[i] < 110) biome = BIOME_SHALLOW_WATER;
-                else if(topology[i] < 115) biome = BIOME_BEACH;
-                else if(topology[i] > 200) biome = BIOME_MOUNTAIN_PEAK;
-                else if(topology[i] > 160) biome = BIOME_ALPINE;
+                if(topology < 100) biome = BIOME_WATER
+                else if(topology < 110) biome = BIOME_SHALLOW_WATER;
+                else if(topology < 115) biome = BIOME_BEACH;
+                else if(topology > 200) biome = BIOME_MOUNTAIN_PEAK;
+                else if(topology > 160) biome = BIOME_ALPINE;
                 else {
-                    if(moisture[i] < 50) biome = BIOME_DESERT;
-                    else if(moisture[i] < 100) biome = BIOME_PLAIN;
+                    if(moisture < 50) biome = BIOME_DESERT;
+                    else if(moisture < 100) biome = BIOME_PLAIN;
                     else biome = BIOME_FOREST;
                 }
 
                 var haveTree = false;
-                if(topology[i] > 115 && topology[i] < 200) {
-                    var treeFactor = ((trees[i] / 255) - 0.5) * 2 * 10;
-                    var moistureFactor = ((moisture[i] / 255) - 0.5) * 2 * 2;
-                    var topologyFactor = ((topology[i] / 255) - 0.5) * 2 * 2;
+                if(topology > 115 && topology < 200) {
+                    var treeFactor = ((trees / 255) - 0.5) * 2 * 10;
+                    var moistureFactor = ((moisture / 255) - 0.5) * 2 * 2;
+                    var topologyFactor = ((topology / 255) - 0.5) * 2 * 2;
 
                     var treeProbability = (topologyFactor*1.5 - moistureFactor - treeFactor/4)/1.2;
 
@@ -176,28 +186,31 @@ MapGenerator.prototype.generateImage = function(seed, width, height) {
         _this.onprogress(Math.min(progressReports['topology'], progressReports['moisture'], progressReports['trees']));
     };
 
-    this.topologyGenerator.generate(seed, width, height);
+    this.topologyGenerator.generate(seed, width, height, 'warp', {'strength': 350});
     this.topologyGenerator.onprogress = function(p) {
         handleSubProgress('topology', p);
     };
     this.topologyGenerator.ondone = function(result) {
         generationDone('topology', result);
+        _this.oncomponent('topology', result);
     };
 
-    this.moistureGenerator.generate(seed+1, width, height, 'fbm');
+    this.moistureGenerator.generate(seed+1, width, height, 'fbm', {'octaves': 4});
     this.moistureGenerator.onprogress = function(p) {
         handleSubProgress('moisture', p);
     };
     this.moistureGenerator.ondone = function(result) {
         generationDone('moisture', result);
+        _this.oncomponent('moisture', result);
     };
 
-    this.treeGenerator.generate(seed+2, width, height, 'warp', {'strength': 500});
+    this.treeGenerator.generate(seed+2, width, height, 'warp', {'strength': 750, 'octaves': 4});
     this.treeGenerator.onprogress = function(p) {
         handleSubProgress('trees', p);
     };
     this.treeGenerator.ondone = function(result) {
         generationDone('trees', result);
+        _this.oncomponent('trees', result);
     };
 };
 
@@ -230,8 +243,8 @@ SingleGenerator.prototype.setGenerator = function(generator) {
     };
 };
 
-SingleGenerator.prototype.generateImage = function(seed, width, height) {
-    this.generator.generateImage(seed, width, height);
+SingleGenerator.prototype.generateImage = function(seed, width, height, options) {
+    this.generator.generateImage(seed, width, height, options);
 };
 
 SingleGenerator.prototype.stop = function() {
@@ -240,7 +253,7 @@ SingleGenerator.prototype.stop = function() {
     }
 };
 
-var createImage = function(generator, seed) {
+var createImage = function(generator, seed, options) {
     console.log('Generating with seed ' + seed);
 
     var progressElement = document.getElementById('progress-bar');
@@ -250,7 +263,7 @@ var createImage = function(generator, seed) {
     var width = canvasElement.width;
     var height = canvasElement.height;
 
-    generator.generateImage(seed, width, height);
+    generator.generateImage(seed, width, height, options);
 
     generator.onprogress = function(p) {
         progressElement.value = p * 100;
@@ -262,27 +275,58 @@ var createImage = function(generator, seed) {
         imageData.data.set(result);
         ctx.putImageData(imageData, 0, 0);
     };
+    generator.generator.oncomponent = function(name, result) {
+        var canvasId;
+        if(name === 'topology') canvasId = 'topologyMap';
+        else if(name === 'moisture') canvasId = 'moistureMap';
+        else if(name === 'trees') canvasId = 'treeMap';
+        else throw 'Unknown result component "' + name + '"';
+
+        var componentCanvasElement = document.getElementById(canvasId);
+        var componentCtx = componentCanvasElement.getContext('2d');
+        var imageData = componentCtx.createImageData(width, height);
+
+        for(var i = 0; i < width*height; i += 1) {
+            var outputOffset = i*4;
+            imageData.data[outputOffset] = result[i];
+            imageData.data[outputOffset+1] = result[i];
+            imageData.data[outputOffset+2] = result[i];
+            imageData.data[outputOffset+3] = 255;
+        }
+        componentCtx.putImageData(imageData, 0, 0);
+    };
 };
 
 window.onload = function() {
+    var moistureElement = document.getElementById('moisture-input');
+    var elevationElement = document.getElementById('elevation-input');
+    var seedElement = document.getElementById('seed-input');
     var canvasElement = document.getElementById('draw');
     var generator = new SingleGenerator(new MapGenerator());
 
-    document.getElementById('generate-noise-button').onclick = function() {
-        var seed = new Date().getTime();
-        generator.generator.stop();
-        generator.setGenerator(new NoiseGenerator());
-        createImage(generator, seed);
-    };
-
+    var seed = parseInt(seedElement.value);
     document.getElementById('generate-map-button').onclick = function() {
-        var seed = new Date().getTime();
+        var newSeed = parseInt(seedElement.value);
+        if(seed === newSeed || isNaN(newSeed)) {
+            seed = new Date().getTime();
+            seedElement.value = seed;
+        }
+        else {
+            seed = newSeed;
+        }
+
+        var options = {};
+        options.moisture = parseFloat(moistureElement.value);
+        options.elevation = parseFloat(elevationElement.value);
+
         generator.generator.stop();
         generator.setGenerator(new MapGenerator());
-        createImage(generator, seed);
+        createImage(generator, seed, options);
+
+        return false;
     };
 
-    createImage(generator, 1950328);
+    createImage(generator, seed);
 };
 
 },{"./xorshift":2}],2:[function(require,module,exports){

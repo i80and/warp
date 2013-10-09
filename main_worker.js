@@ -18,10 +18,16 @@ self.onmessage = function(ev) {
     var rng = new xorshift.RandomGenerator(seed);
     var p2d = new warp.Perlin2D(width, height, 1, 2, rng);
 
+    var octaves = 8;
+    if(ev.data.options.octaves !== undefined) {
+        octaves = ev.data.options.octaves;
+    }
+    p2d.octaves = octaves;
+
     var generate;
     if(type === 'warp') {
         var strength = 250;
-        if(ev.data.options !== undefined) {
+        if(ev.data.options.strength !== undefined) {
             strength = ev.data.options.strength;
         }
         generate = function(x, y) {

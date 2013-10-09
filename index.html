@@ -2,6 +2,7 @@
 <html>
     <head>
         <title>Warp</title>
+        <link rel="stylesheet" type="text/css" href="main.css" />
         <meta charset="utf-8">
     </head>
     <body>
@@ -10,9 +11,35 @@
             <progress id="progress-bar" value="0" max="100"></progress>
         </div>
 
-        <div>
-            <button id="generate-noise-button">Generate Noise</button>
-            <button id="generate-map-button">Generate Map</button>
+        <form>
+            <div>
+                <input type="submit" id="generate-map-button" value="Generate Map">
+            </div>
+
+            <div>
+                <label for="moisture-input">Moisture</label>
+                <input id="moisture-input" name="moisture-input" type="range" min="-128" max="128" value="0">
+                <label for="elevation-input">Elevation</label>
+                <input id="elevation-input" name="elevation-input" type="range" min="-128" max="128" value="0">
+                <label for="seed-input">Seed</label>
+                <input id="seed-input" name="seed-input" type="number" value="1950328" required>
+                <input type="reset">
+            </div>
+        </form>
+
+        <div id="componentMaps">
+            <table>
+                <tr>
+                    <td><canvas id="topologyMap" width=768 height=768></canvas></td>
+                    <td><canvas id="moistureMap" width=768 height=768></canvas></td>
+                    <td><canvas id="treeMap" width=768 height=768></canvas></td>
+                </tr>
+                <tr>
+                    <td>Topology</td>
+                    <td>Moisture</td>
+                    <td>Tree-ity</td>
+                </tr>
+            </table>
         </div>
 
         <script type="text/javascript" src="main.js"></script>

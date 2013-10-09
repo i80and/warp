@@ -1,0 +1,8 @@
+#componentMaps {
+    border-top: 1px solid gray;
+}
+
+#componentMaps canvas {
+    width: 364px;
+    height: 364px;
+}
