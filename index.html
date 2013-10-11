@@ -2,14 +2,28 @@
 <html>
     <head>
         <title>Warp</title>
-        <link rel="stylesheet" type="text/css" href="main.css" />
         <meta charset="utf-8">
+        <style type="text/css">
+            #componentMaps {
+                border-top: 1px solid gray;
+            }
+
+            #componentMaps canvas {
+                width: 364px;
+                height: 364px;
+            }
+
+            #sample-rendering {
+                display: none;
+            }
+        </style>
     </head>
+
     <body>
         <div id="sample-rendering">
             <img src="sample.png" alt="Sample rendering">
-            <div>Either JavaScript is disabled, or you're using a crummy^Wobsolete^W<em>interesting</em> browser.  Please use an up-to-date Firefox or Chrome installation, and make sure that JavaScript is enabled.  For now though, this is a sample rendering of what all the fuss is about.</div>
         </div>
+
         <canvas id="draw" width=768 height=768></canvas>
         <div>
             <progress id="progress-bar" value="0" max="100"></progress>
