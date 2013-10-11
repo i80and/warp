@@ -6,3 +6,7 @@
     width: 364px;
     height: 364px;
 }
+
+#sample-rendering {
+    display: none;
+}
